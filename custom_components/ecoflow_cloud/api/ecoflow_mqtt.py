@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import ssl
-import time
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import callback
@@ -35,6 +34,7 @@ class EcoflowMQTTClient:
 
         # self.__client._connect_timeout = 15.0
         self.__client.setup()
+        self.__client.reconnect_delay_set(min_delay=1, max_delay=120)
         self.__client.username_pw_set(self.__mqtt_info.username, self.__mqtt_info.password)
         self.__client.tls_set(certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED)
         self.__client.tls_insecure_set(False)
@@ -96,7 +96,6 @@ class EcoflowMQTTClient:
         self.connected = False
         if reason_code.is_failure:
             self.__log_with_reason("disconnect", client, userdata, reason_code)
-            time.sleep(5)
 
     @callback
     def _on_message(self, client, userdata, message: MQTTMessage):
