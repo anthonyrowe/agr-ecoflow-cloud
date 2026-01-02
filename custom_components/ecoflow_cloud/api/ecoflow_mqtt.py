@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import ssl
+import threading
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import callback
@@ -66,6 +67,7 @@ class EcoflowMQTTClient:
     @callback
     def _on_socket_close(self, client: Client, userdata: Any, sock: SocketLike) -> None:
         _LOGGER.error(f"Unexpected MQTT Socket disconnection : {str(sock)}")
+        threading.Timer(5.0, self.reconnect).start()
 
     @callback
     def _on_connect(
