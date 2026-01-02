@@ -6,6 +6,7 @@ import threading
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import callback
+from homeassistant.util import dt as dt_util
 from paho.mqtt.client import Client, ConnectFlags, DisconnectFlags, MQTTMessage, PayloadType
 from paho.mqtt.properties import Properties
 from paho.mqtt.reasoncodes import ReasonCode
@@ -49,6 +50,27 @@ class EcoflowMQTTClient:
         )
         self.__client.connect(self.__mqtt_info.url, self.__mqtt_info.port, keepalive=15)
         self.__client.loop_start()
+
+        self._watchdog_loop()
+
+    def _watchdog_loop(self):
+        try:
+            if self.is_connected():
+                max_time = dt_util.utcnow() - dt_util.parse_datetime("2000-01-01 00:00:00+00:00")
+                for device in self.__devices.values():
+                    # check if we have received any message from the device
+                    device_time = dt_util.utcnow() - device.data.last_received_time()
+                    if device_time < max_time:
+                        max_time = device_time
+
+                if max_time.total_seconds() > 300:
+                    _LOGGER.error("No message received from any device for 300 seconds. Reconnecting...")
+                    self.reconnect()
+
+        except Exception as e:
+            _LOGGER.error(f"Error in watchdog loop: {e}")
+
+        threading.Timer(60.0, self._watchdog_loop).start()
 
     def is_connected(self):
         return self.__client.is_connected()
