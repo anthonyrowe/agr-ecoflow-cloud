@@ -135,8 +135,11 @@ class EcoflowMQTTClient:
         self.__client.loop_stop()
         self.__client.disconnect()
 
-    def __log_with_reason(self, action: str, client, userdata, reason_code: ReasonCode):
-        _LOGGER.error(f"MQTT {action}: {reason_code.getName()} ({self.__mqtt_info.client_id}) - {userdata}")
+    def __log_with_reason(self, action: str, client, userdata, reason_code: ReasonCode | int):
+        reason = reason_code
+        if hasattr(reason_code, "getName"):
+            reason = reason_code.getName()
+        _LOGGER.error(f"MQTT {action}: {reason} ({self.__mqtt_info.client_id}) - {userdata}")
 
     def publish(self, topic: str, message: PayloadType) -> None:
         try:
