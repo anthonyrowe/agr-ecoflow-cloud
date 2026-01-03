@@ -13,7 +13,7 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt
 
 from custom_components.ecoflow_cloud.api import EcoflowApiClient
@@ -77,6 +77,10 @@ class EcoflowDeviceUpdateCoordinator(DataUpdateCoordinator[EcoflowBroadcastDataH
 
     async def _async_update_data(self) -> EcoflowBroadcastDataHolder:
         received_time = self.holder.last_received_time()
+
+        if (dt.utcnow() - received_time) > (3 * self.update_interval):
+            raise UpdateFailed("Device is offline")
+
         changed = self.__last_broadcast < received_time
         self.__last_broadcast = received_time
         return EcoflowBroadcastDataHolder(self.holder, changed)

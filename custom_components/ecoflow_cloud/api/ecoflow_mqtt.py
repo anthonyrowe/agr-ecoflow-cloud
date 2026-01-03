@@ -83,7 +83,8 @@ class EcoflowMQTTClient:
             self.__client.loop_start()
             return True
         except Exception as e:
-            _LOGGER.error(e)
+            _LOGGER.error(f"Reconnection failed: {e}")
+            threading.Timer(5.0, self.reconnect).start()
             return False
 
     @callback
