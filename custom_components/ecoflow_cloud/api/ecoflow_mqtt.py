@@ -25,6 +25,7 @@ class EcoflowMQTTClient:
         self.connected = False
         self.__mqtt_info = mqtt_info
         self.__devices: dict[str, BaseDevice] = devices
+        self.__last_connection_state_change = dt_util.utcnow()
 
         from homeassistant.components.mqtt.async_client import AsyncMQTTClient
 
@@ -67,6 +68,13 @@ class EcoflowMQTTClient:
                     _LOGGER.error("No message received from any device for 300 seconds. Reconnecting...")
                     self.reconnect()
 
+            else:
+                # if disconnected for more than 300 seconds, reconnect
+                duration = dt_util.utcnow() - self.__last_connection_state_change
+                if duration.total_seconds() > 300:
+                    _LOGGER.error(f"Disconnected for {duration.total_seconds()} seconds. Reconnecting...")
+                    self.reconnect()
+
         except Exception as e:
             _LOGGER.error(f"Error in watchdog loop: {e}")
 
@@ -90,7 +98,6 @@ class EcoflowMQTTClient:
     @callback
     def _on_socket_close(self, client: Client, userdata: Any, sock: SocketLike) -> None:
         _LOGGER.error(f"Unexpected MQTT Socket disconnection : {str(sock)}")
-        threading.Timer(30.0, self.reconnect).start()
 
     @callback
     def _on_connect(
@@ -98,6 +105,7 @@ class EcoflowMQTTClient:
     ):
         if rc == 0:
             self.connected = True
+            self.__last_connection_state_change = dt_util.utcnow()
             target_topics = [(topic, 1) for topic in self.__target_topics()]
             self.__client.subscribe(target_topics)
             _LOGGER.info(f"Subscribed to MQTT topics {target_topics}")
@@ -119,6 +127,7 @@ class EcoflowMQTTClient:
             # when there is a broken pipe error.
             return
         self.connected = False
+        self.__last_connection_state_change = dt_util.utcnow()
         if reason_code.is_failure:
             self.__log_with_reason("disconnect", client, userdata, reason_code)
 
