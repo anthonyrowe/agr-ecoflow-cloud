@@ -84,13 +84,13 @@ class EcoflowMQTTClient:
             return True
         except Exception as e:
             _LOGGER.error(f"Reconnection failed: {e}")
-            threading.Timer(5.0, self.reconnect).start()
+            threading.Timer(30.0, self.reconnect).start()
             return False
 
     @callback
     def _on_socket_close(self, client: Client, userdata: Any, sock: SocketLike) -> None:
         _LOGGER.error(f"Unexpected MQTT Socket disconnection : {str(sock)}")
-        threading.Timer(5.0, self.reconnect).start()
+        threading.Timer(30.0, self.reconnect).start()
 
     @callback
     def _on_connect(
